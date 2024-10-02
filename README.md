@@ -16,3 +16,4 @@
     * You will need the "start" SSO URL that can be found under IAM Identity Center - Settings
 1. Install or update `terraform`
 1. Set up an initial `main.tf` to make basic calls and prove out terraform access to the AWS account.
+1. Next, add VPC creation to `main.tf`.
