@@ -72,3 +72,30 @@ resource "aws_internet_gateway" "main_igw" {
 output "internet_gateway_id" {
     value = aws_internet_gateway.main_igw.id
 }
+
+# Fetch the latest Amazon Linux 2 AMI for the current region
+data "aws_ami" "amazon_linux_2" {
+    most_recent = true
+    owners = ["amazon"]
+
+    filter {
+        name = "name"
+        values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+    }
+}
+
+# Create an EC2 instance in the Public Subnet
+resource "aws_instance" "public_ec2" {
+    ami = data.aws_ami.amazon_linux_2.id
+    instance_type = "t2.micro"
+    subnet_id = aws_subnet.public_subnet.id
+    associate_public_ip_address = true
+    key_name = "aws-odyssey-key-pair"
+
+    tags = {
+        Name = "terraform-public-ec2"
+    }
+}
+output "public_ec2_ip" {
+    value = aws_instance.public_ec2.public_ip
+}
