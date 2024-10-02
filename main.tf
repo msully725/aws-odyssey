@@ -60,3 +60,15 @@ resource "aws_subnet" "private_subnet" {
 output "private_subnet_id" {
     value = aws_subnet.private_subnet.id
 }
+
+# Create Internet Gateway
+resource "aws_internet_gateway" "main_igw" {
+    vpc_id = aws_vpc.main_vpc.id
+
+    tags = { 
+        Name = "terraform-main-igw"
+    }
+}
+output "internet_gateway_id" {
+    value = aws_internet_gateway.main_igw.id
+}
