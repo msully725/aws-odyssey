@@ -2,9 +2,10 @@
 
 ## Set Up
 1. Set your AWS profile in `.env`
-2. Run `source ./set-aws-account.sh`
-3. Verify the Account ID is what you expect.
-4. Do the terraformz
+1. Run `source ./set-aws-account.sh`
+1. Verify the Account ID is what you expect.
+1. Generate a Key Pair for configuring EC2 instances with `generate-key-pair.sh`
+1. Do the terraformz
 
 ## Work Log
 1. Set up a new AWS account. For example, `abc-aws-odyssey`
@@ -22,3 +23,4 @@
     ```aws ec2 describe-subnets --filters "Name=vpc-id,Values=$(terraform output -raw vpc_id)" --query "Subnets[?Tags[?Value=='terraform-public-subnet']].SubnetId"```
 1. Add a Private Subnet.
 1. Add an Internet Gateway.
+1. Add an EC2 instance.
