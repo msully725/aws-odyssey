@@ -1,5 +1,11 @@
 # AWS Odyssey
 
+## Set Up
+1. Set your AWS profile in .env
+2. Run `source ./set-aws-account.sh`
+3. Verify the Account ID is what you expect.
+4. Do the terraformz
+
 ## Work Log
 1. Set up a new AWS account. For example, `abc-aws-odyssey`
 1. Set up IAM Identity Center to enable SSO-based AWS CLI access. 
