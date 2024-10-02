@@ -12,6 +12,10 @@ terraform {
 
     required_version = ">= 1.0.0"
 }
+output "aws_account_id" {
+    value = data.aws_caller_identity.current.account_id
+}
+data "aws_caller_identity" "current" {}
 
 # Create VPC
 resource "aws_vpc" "main_vpc" {
@@ -22,6 +26,9 @@ resource "aws_vpc" "main_vpc" {
     tags = {
         Name = "terraform-eks-fargate-vpc"
     }
+}
+output "vpc_id" {
+    value = aws_vpc.main_vpc.id
 }
 
 # Create Public Subnet
@@ -35,17 +42,21 @@ resource "aws_subnet" "public_subnet" {
         Name = "terraform-public-subnet"
     }
 }
-
 output "public_subnet_id" {
     value = aws_subnet.public_subnet.id
 }
 
-output "vpc_id" {
-    value = aws_vpc.main_vpc.id
-}
+# Create Private Subnet
+resource "aws_subnet" "private_subnet" {
+    vpc_id = aws_vpc.main_vpc.id
+    cidr_block = "10.0.2.0/24"
+    availability_zone = "us-east-1a"
+    map_public_ip_on_launch = false
 
-output "aws_account_id" {
-    value = data.aws_caller_identity.current.account_id
+    tags = {
+        Name = "terraform-private-subnet"
+    }
 }
-
-data "aws_caller_identity" "current" {}
+output "private_subnet_id" {
+    value = aws_subnet.private_subnet.id
+}

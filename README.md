@@ -20,3 +20,5 @@
 1. Add a Public Subnet.
     * Command for veryfying Subnet: 
     ```aws ec2 describe-subnets --filters "Name=vpc-id,Values=$(terraform output -raw vpc_id)" --query "Subnets[?Tags[?Value=='terraform-public-subnet']].SubnetId"```
+1. Add a Private Subnet.
+1. Add an Internet Gateway.
