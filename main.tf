@@ -84,6 +84,30 @@ data "aws_ami" "amazon_linux_2" {
     }
 }
 
+# Create a security group that allows SSH access
+resource "aws_security_group" "allow_ssh" {
+    vpc_id = aws_vpc.main_vpc.id
+
+    ingress {
+        description = "SSH from my IP"
+        from_port = 22
+        to_port = 22
+        protocol = "tcp"
+        cidr_blocks = ["${var.my_ip}/32"] 
+    }
+
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    tags = {
+        Name = "allow-ssh-sg"
+    }
+}
+
 # Create an EC2 instance in the Public Subnet
 resource "aws_instance" "public_ec2" {
     ami = data.aws_ami.amazon_linux_2.id
@@ -91,6 +115,7 @@ resource "aws_instance" "public_ec2" {
     subnet_id = aws_subnet.public_subnet.id
     associate_public_ip_address = true
     key_name = "aws-odyssey-key-pair"
+    vpc_security_group_ids = [aws_security_group.allow_ssh.id]
 
     tags = {
         Name = "terraform-public-ec2"
