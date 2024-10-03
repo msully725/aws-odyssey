@@ -14,7 +14,6 @@ account_info=$(aws sts get-caller-identity 2>&1)
 if [ $? -ne 0 ]; then
   echo "Error retrieving AWS account information:"
   echo "$account_info"
-  unset AWS_PROFILE  # Optionally unset the profile if verification fails
   return 1  # Use 'exit 1' if not sourcing
 fi
 
