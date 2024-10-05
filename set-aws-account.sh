@@ -1,3 +1,11 @@
+# Check if the script is being sourced
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    echo "Script is sourced, continuing..."
+else
+    echo "Error: Script must be sourced to work correctly: source ./set-aws-account.sh"
+    exit 1
+fi
+
 # Path to the .env file
 ENV_FILE="./.env"
 
