@@ -17,6 +17,8 @@ else
   return 1  # Use 'exit 1' if not sourcing
 fi
 
+echo "AWS_PROFILE: $AWS_PROFILE"
+
 # Verify the active account
 account_info=$(aws sts get-caller-identity 2>&1)
 if [ $? -ne 0 ]; then
