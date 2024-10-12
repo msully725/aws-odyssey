@@ -24,3 +24,4 @@
 1. Add a Private Subnet.
 1. Add an Internet Gateway.
 1. Add an EC2 instance.
+1. Add a Route for SSH to EC2
