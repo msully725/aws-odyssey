@@ -15,7 +15,8 @@
 1. Generate a Key Pair for configuring EC2 instances with `generate-key-pair.sh`
 
 
-## Creating EC2 instances and SSH'ing to them
+## ec2-ssh
+### Creating EC2 instances and SSH'ing to them
 1. Set up an initial `main.tf` to make basic calls and prove out terraform access to the AWS account.
 1. Add VPC creation to `main.tf`.
 1. Add a Public Subnet.
@@ -26,3 +27,21 @@
 1. Add an EC2 instance.
 1. Add a Route for SSH to EC2
 1. SSH to the EC2 instance, e.g. `ssh -i aws-odyssey-key-pair.pem ec2-user@[IP ADDRESS]`
+
+## event-aggregator
+### Create an API triggered data flow that aggregates data via event streaming
+1. Add Dynamo tables
+
+### Deployment Diagram
+```mermaid
+graph TD
+    A[Users] -->|trigger-event| B[API Gateway]
+    A[Users] -->|get-summary| B
+    B -->|trigger-event| C[Lambda - Data Producer]
+    C --> D[DynamoDB - EventData]
+    D -->|trigger-event| E[DynamoDB Streams]
+    E --> F[Lambda - Data Aggregator]
+    F --> G[DynamoDB - Summaries]
+    B -->|get-summary| H[Lambda - Summary Retriever]
+    H --> G
+```
