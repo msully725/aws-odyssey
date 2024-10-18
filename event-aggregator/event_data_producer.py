@@ -1,7 +1,7 @@
 import json
 import boto3
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('event_aggregator_event_data')
@@ -9,7 +9,7 @@ table = dynamodb.Table('event_aggregator_event_data')
 def lambda_handler(event, context):
     event_id = str(uuid.uuid4())
 
-    timestamp = str(datetime.now(datetime.timezone.utc))
+    timestamp = str(datetime.now(timezone.utc))
 
     data = json.loads(event['body'])
 

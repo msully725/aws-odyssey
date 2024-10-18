@@ -173,7 +173,7 @@ resource "aws_api_gateway_method_settings" "api_method_settings" {
   rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
   stage_name  = aws_api_gateway_stage.api_stage.stage_name
 
-  method_path  = "/*/*"  # Apply to all resources and methods
+  method_path  = "*/*"  # Apply to all resources and methods
   settings {
     logging_level     = "INFO"
     metrics_enabled   = true
