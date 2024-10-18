@@ -2,6 +2,7 @@ provider "aws" {
     region = "us-east-1"
 }
 
+# DynamoDb
 resource "aws_dynamodb_table" "event_data_table" {
     name = "event-aggregator-event-data"
     billing_mode = "PAY_PER_REQUEST"
@@ -34,6 +35,7 @@ resource "aws_dynamodb_table" "summaries_table" {
     }
 }
 
+# Data Producer Lambda
 resource "aws_iam_role" "lambda_exec_role" {
     name = "event_aggregator_lambda_role"
 
@@ -72,3 +74,5 @@ resource "aws_lambda_function" "data_producer_lambda" {
     role = aws_iam_role.lambda_exec_role.arn
     filename = "event_data_producer.zip"
 }
+
+# API Gateway
