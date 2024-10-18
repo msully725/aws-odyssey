@@ -137,13 +137,17 @@ resource "aws_api_gateway_integration" "lambda_integration" {
     uri = aws_lambda_function.data_producer_lambda.invoke_arn
 }
 
+resource "aws_cloudwatch_log_group" "api_gateway_logs" {
+    name = "/aws/apigateway/event-aggregator-logs"
+}
+
 resource "aws_api_gateway_stage" "api_stage" {
     stage_name = "dev"
     rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
     deployment_id = aws_api_gateway_deployment.api_deployment.id
 
     access_log_settings {
-        destination_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
+        destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
         format          = jsonencode({
             requestId       : "$context.requestId",
             ip              : "$context.identity.sourceIp",
@@ -174,7 +178,6 @@ resource "aws_api_gateway_method_settings" "api_method_settings" {
 resource "aws_api_gateway_deployment" "api_deployment" {
     depends_on = [ aws_api_gateway_integration.lambda_integration ]
     rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
-    # stage_name = "dev"
 }
 
 resource "aws_lambda_permission" "api_gateway_invoke" {
