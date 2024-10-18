@@ -70,5 +70,5 @@ resource "aws_lambda_function" "data_producer_lambda" {
     handler = "event_data_producer.lambda_handler"
     runtime = "python3.8"
     role = aws_iam_role.lambda_exec_role.arn
-    filename = "lambda_function.zip"
+    filename = "event_data_producer.zip"
 }
