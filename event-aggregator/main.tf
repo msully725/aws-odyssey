@@ -76,3 +76,42 @@ resource "aws_lambda_function" "data_producer_lambda" {
 }
 
 # API Gateway
+resource "aws_api_gateway_rest_api" "event_api_gateway" {
+    name = "event-aggregator-api"
+    description = "API for the Event Aggregator"
+}
+
+resource "aws_api_gateway_resource" "trigger_event_resource" {
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    parent_id = aws_api_gateway_rest_api.event_api_gateway.root_resource_id
+    path_part = "trigger-event"
+}
+
+resource "aws_api_gateway_method" "post_trigger_event_method" {
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    resource_id = aws_api_gateway_resource.trigger_event_resource.id
+    http_method = "POST"
+    authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda_integration" {
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    resource_id = aws_api_gateway_resource.trigger_event_resource.id
+    http_method = aws_api_gateway_method.post_trigger_event_method.http_method
+    integration_http_method = "POST"
+    type = "AWS_PROXY"
+    uri = aws_lambda_function.data_producer_lambda.invoke_arn
+}
+
+resource "aws_api_gateway_deployment" "api_deployment" {
+    depends_on = [ aws_api_gateway_integration.lambda_integration ]
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    stage_name = "dev"
+}
+
+resource "aws_lambda_permission" "api_gateway_invoke" {
+    statement_id = "AllowAPIGatewayInvoke"
+    action = "lambda:InvokeFunction"
+    function_name = aws_lambda_function.data_producer_lambda.function_name
+    principal = "apigateway.amazonaws.com"
+}
