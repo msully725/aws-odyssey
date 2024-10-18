@@ -76,46 +76,6 @@ resource "aws_lambda_function" "data_producer_lambda" {
 }
 
 # API Gateway
-resource "aws_api_gateway_rest_api" "event_api_gateway" {
-    name = "event-aggregator-api"
-    description = "API for the Event Aggregator"
-}
-
-resource "aws_api_gateway_resource" "trigger_event_resource" {
-    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
-    parent_id = aws_api_gateway_rest_api.event_api_gateway.root_resource_id
-    path_part = "trigger-event"
-}
-
-resource "aws_api_gateway_method" "post_trigger_event_method" {
-    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
-    resource_id = aws_api_gateway_resource.trigger_event_resource.id
-    http_method = "POST"
-    authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "lambda_integration" {
-    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
-    resource_id = aws_api_gateway_resource.trigger_event_resource.id
-    http_method = aws_api_gateway_method.post_trigger_event_method.http_method
-    integration_http_method = "POST"
-    type = "AWS_PROXY"
-    uri = aws_lambda_function.data_producer_lambda.invoke_arn
-}
-
-resource "aws_api_gateway_deployment" "api_deployment" {
-    depends_on = [ aws_api_gateway_integration.lambda_integration ]
-    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
-    stage_name = "dev"
-}
-
-resource "aws_lambda_permission" "api_gateway_invoke" {
-    statement_id = "AllowAPIGatewayInvoke"
-    action = "lambda:InvokeFunction"
-    function_name = aws_lambda_function.data_producer_lambda.function_name
-    principal = "apigateway.amazonaws.com"
-}
-
 resource "aws_iam_role" "api_gateway_cloudwatch_role" {
     name = "api-gateway-cloudwatch-role"
 
@@ -149,3 +109,78 @@ resource "aws_iam_role_policy" "api_gateway_cloudwatch_policy" {
     
     })
 }
+
+resource "aws_api_gateway_rest_api" "event_api_gateway" {
+    name = "event-aggregator-api"
+    description = "API for the Event Aggregator"
+}
+
+resource "aws_api_gateway_resource" "trigger_event_resource" {
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    parent_id = aws_api_gateway_rest_api.event_api_gateway.root_resource_id
+    path_part = "trigger-event"
+}
+
+resource "aws_api_gateway_method" "post_trigger_event_method" {
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    resource_id = aws_api_gateway_resource.trigger_event_resource.id
+    http_method = "POST"
+    authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda_integration" {
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    resource_id = aws_api_gateway_resource.trigger_event_resource.id
+    http_method = aws_api_gateway_method.post_trigger_event_method.http_method
+    integration_http_method = "POST"
+    type = "AWS_PROXY"
+    uri = aws_lambda_function.data_producer_lambda.invoke_arn
+}
+
+resource "aws_api_gateway_stage" "api_stage" {
+    stage_name = "dev"
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    deployment_id = aws_api_gateway_deployment.api_deployment.id
+
+    access_log_settings {
+        destination_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
+        format          = jsonencode({
+            requestId       : "$context.requestId",
+            ip              : "$context.identity.sourceIp",
+            caller          : "$context.identity.caller",
+            user            : "$context.identity.user",
+            requestTime     : "$context.requestTime",
+            httpMethod      : "$context.httpMethod",
+            resourcePath    : "$context.resourcePath",
+            status          : "$context.status",
+            protocol        : "$context.protocol",
+            responseLength  : "$context.responseLength"
+        })
+    }
+}
+
+resource "aws_api_gateway_method_settings" "api_method_settings" {
+  rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+  stage_name  = aws_api_gateway_stage.api_stage.stage_name
+
+  method_path  = "/*/*"  # Apply to all resources and methods
+  settings {
+    logging_level     = "INFO"
+    metrics_enabled   = true
+    data_trace_enabled = true
+  }
+}
+
+resource "aws_api_gateway_deployment" "api_deployment" {
+    depends_on = [ aws_api_gateway_integration.lambda_integration ]
+    rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
+    # stage_name = "dev"
+}
+
+resource "aws_lambda_permission" "api_gateway_invoke" {
+    statement_id = "AllowAPIGatewayInvoke"
+    action = "lambda:InvokeFunction"
+    function_name = aws_lambda_function.data_producer_lambda.function_name
+    principal = "apigateway.amazonaws.com"
+}
+
