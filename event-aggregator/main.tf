@@ -115,3 +115,37 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
     function_name = aws_lambda_function.data_producer_lambda.function_name
     principal = "apigateway.amazonaws.com"
 }
+
+resource "aws_iam_role" "api_gateway_cloudwatch_role" {
+    name = "api-gateway-cloudwatch-role"
+
+    assume_role_policy = jsonencode({
+        Version = "2012-10-17",
+        Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+                Service = "apigateway.amazonaws.com"
+            }
+        }]
+    })
+}
+
+resource "aws_iam_role_policy" "api_gateway_cloudwatch_policy" {
+    name = "api-gateway-cloudwatch-policy"
+    role = aws_iam_role.api_gateway_cloudwatch_role.id
+
+    policy = jsonencode({
+        Version = "2012-10-17",
+        Statement = [{
+            Effect = "Allow"
+            Action = [
+                "logs:CreateLogGroups",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+            ],
+            Resource = "*"
+        }]
+    
+    })
+}
