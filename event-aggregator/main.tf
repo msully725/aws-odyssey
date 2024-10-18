@@ -34,28 +34,41 @@ resource "aws_dynamodb_table" "summaries_table" {
     }
 }
 
-# resource "aws_iam_role" "lambda_exec_role" {
-#     name = "event_aggregator_lambda_role"
+resource "aws_iam_role" "lambda_exec_role" {
+    name = "event_aggregator_lambda_role"
 
-#     assume_role_policy = jsonencode({
-#         Version = "2012-10-17",
-#         Statement = [{
-#             Action = "sts:AssumeRole"
-#             Effect = "Allow"
-#             Principal = {
-#                 Service = "lambda.amazonaws.com"
-#             }
-#         }]
-#     })
+    assume_role_policy = jsonencode({
+        Version = "2012-10-17",
+        Statement = [{
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+                Service = "lambda.amazonaws.com"
+            }
+        }]
+    })
+}
 
-#     inline_policy {
-#         name = "lambda-"
-#     }
-# }
+resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
+    name = "lambda-dynamodb-policy"
+    role = aws_iam_role.lambda_exec_role.id
 
-# resource "aws_lambda_function" "data_producer_lambda" {
-#     function_name = "event_aggregator_data_producer"
-#     handler = "event_data_producer.lambda_handler"
-#     runtime = "python3.8"
-#     role = aws_iam_role.lambda_exec_role.arn
-# }
+    policy = jsonencode({
+        Version = "2012-10-17",
+        Statement = [
+            {
+                Action = [ "dynamodb:PutItem"]
+                Effect = "Allow"
+                Resource = aws_dynamodb_table.event_data_table.arn
+            }
+        ]
+    })
+}
+
+resource "aws_lambda_function" "data_producer_lambda" {
+    function_name = "event_aggregator_data_producer"
+    handler = "event_data_producer.lambda_handler"
+    runtime = "python3.8"
+    role = aws_iam_role.lambda_exec_role.arn
+    filename = "lambda_function.zip"
+}

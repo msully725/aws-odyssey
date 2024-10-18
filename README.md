@@ -31,6 +31,7 @@
 ## event-aggregator
 ### Create an API triggered data flow that aggregates data via event streaming
 1. Add Dynamo tables
+2. Create Data Producer Lamba function Python code
 
 ### Deployment Diagram
 ```mermaid
