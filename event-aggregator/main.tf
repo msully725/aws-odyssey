@@ -147,6 +147,7 @@ resource "aws_cloudwatch_log_group" "api_gateway_logs" {
 }
 
 resource "aws_api_gateway_stage" "api_stage" {
+    depends_on = [ aws_iam_role_policy_attachment.api_gateway_logging_policy ]
     stage_name = "dev"
     rest_api_id = aws_api_gateway_rest_api.event_api_gateway.id
     deployment_id = aws_api_gateway_deployment.api_deployment.id
