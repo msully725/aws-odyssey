@@ -196,3 +196,25 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
     principal = "apigateway.amazonaws.com"
     source_arn = "${aws_api_gateway_rest_api.event_api_gateway.execution_arn}/*/*"
 }
+
+# Event Aggregator Lambda
+resource "aws_lambda_function" "event_aggregator_lambda" {
+    function_name = "event-aggregator-lambda"
+    handler = "event_aggregator.lambda_handler"
+    runtime = "python3.8"
+    role = aws_iam_role.lambda_exec_role.arn
+    filename = "event_aggregator.zip"
+    source_code_hash = filebase64sha256("${path.module}/event_aggregator.zip")
+
+    environment {
+      variables = {
+        SUMMARIES_TABLE = aws_dynamodb_table.summaries_table.name
+      }
+    }
+}
+
+resource "aws_lambda_event_source_mapping" "event_data_stream" {
+    event_source_arn = aws_dynamodb_table.summaries_table.stream_arn
+    function_name = aws_lambda_function.event_aggregator_lambda.function_name
+    starting_position = "LATEST"
+}
