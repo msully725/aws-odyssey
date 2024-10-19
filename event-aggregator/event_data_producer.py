@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('event_aggregator_event_data')
+table = dynamodb.Table('event-aggregator-event-data')
 
 def lambda_handler(event, context):
     event_id = str(uuid.uuid4())

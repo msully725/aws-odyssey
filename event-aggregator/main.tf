@@ -37,7 +37,7 @@ resource "aws_dynamodb_table" "summaries_table" {
 
 # Data Producer Lambda
 resource "aws_iam_role" "lambda_exec_role" {
-    name = "event_aggregator_lambda_role"
+    name = "event-aggregator-lambda-role"
 
     assume_role_policy = jsonencode({
         Version = "2012-10-17",
@@ -68,11 +68,12 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
 }
 
 resource "aws_lambda_function" "data_producer_lambda" {
-    function_name = "event_aggregator_data_producer"
+    function_name = "event-aggregator-data-producer"
     handler = "event_data_producer.lambda_handler"
     runtime = "python3.8"
     role = aws_iam_role.lambda_exec_role.arn
     filename = "event_data_producer.zip"
+    source_code_hash = filebase64sha256("${path.module}/event_data_producer.zip")
 }
 
 # API Gateway
