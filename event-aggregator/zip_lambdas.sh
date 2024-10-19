@@ -1,7 +1,8 @@
 #!/bin/bash
 
 lambda_files=(
-    "event_data_producer.py"
+    "event_data_producer.py",
+    "event_aggregator.py"
 )
 
 zip_lambda() {
