@@ -30,8 +30,21 @@
 
 ## event-aggregator
 ### Create an API triggered data flow that aggregates data via event streaming
+
+#### Create Data Producer API
 1. Add Dynamo tables
-2. Create Data Producer Lamba function Python code
+2. Create Data Producer Lamba function python code
+3. Zip via script
+4. Use source hash code to ensure terraform recognizes the resource has changed when the python code is changed
+5. Set up API gateway and all the connectivty bits to invoke the Lambda
+6. Invoke Lambda via `trigger-event.sh` script that calls the API Gateway `trigger-event` POST method
+    * Observe event data written to DynamoDb Event Data table
+
+Challenges that came up
+* We did some resource rename refactors and it appears not all of them stuck. Specifically the API Gateway was trying to call the Lambda's old URI. 
+
+#### Create Data Aggregator Flow
+1. Create Event Data DynamoDb Stream
 
 ### Deployment Diagram
 ```mermaid

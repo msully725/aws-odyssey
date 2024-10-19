@@ -7,6 +7,8 @@ resource "aws_dynamodb_table" "event_data_table" {
     name = "event-aggregator-event-data"
     billing_mode = "PAY_PER_REQUEST"
     hash_key = "EventID"
+    stream_enabled = true
+    stream_view_type = "NEW_IMAGE"
 
     attribute {
       name = "EventID"
@@ -194,4 +196,3 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
     principal = "apigateway.amazonaws.com"
     source_arn = "${aws_api_gateway_rest_api.event_api_gateway.execution_arn}/*/*"
 }
-
