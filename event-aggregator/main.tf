@@ -53,6 +53,26 @@ resource "aws_iam_role" "lambda_exec_role" {
     })
 }
 
+resource "aws_iam_role_policy" "lambda_cloudwatch_policy" {
+    name = "lambda-cloudwatch-policy"
+    role = aws_iam_role.lambda_exec_role.id
+
+    policy = jsonencode({
+        Version = "2012-10-17",
+        Statement = [
+            {
+                Effect = "Allow",
+                Action = [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                ],
+                Resource = "arn:aws:logs:*:*:*"
+            }
+        ]
+    })
+}
+
 resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
     name = "lambda-dynamodb-policy"
     role = aws_iam_role.lambda_exec_role.id
