@@ -234,8 +234,8 @@ resource "aws_lambda_function" "event_aggregator_lambda" {
     }
 }
 
-# resource "aws_lambda_event_source_mapping" "event_data_stream" {
-#     event_source_arn = aws_dynamodb_table.event_data_table.stream_arn
-#     function_name = aws_lambda_function.event_aggregator_lambda.function_name
-#     starting_position = "LATEST"
-# }
+resource "aws_lambda_event_source_mapping" "event_data_stream" {
+    event_source_arn = aws_dynamodb_table.event_data_table.stream_arn
+    function_name = aws_lambda_function.event_aggregator_lambda.function_name
+    starting_position = "LATEST"
+}
