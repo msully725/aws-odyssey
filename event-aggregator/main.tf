@@ -60,10 +60,31 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
     policy = jsonencode({
         Version = "2012-10-17",
         Statement = [
+            # Access for trigger event lambda
             {
                 Action = [ "dynamodb:PutItem"]
                 Effect = "Allow"
                 Resource = aws_dynamodb_table.event_data_table.arn
+            },
+            # Access for aggregator lambda to event data stream
+            {
+                Action = [
+                    "dynamodb:GetRecords",
+                    "dynamodb:GetShardIterator",
+                    "dynamodb:DescribeStream",
+                    "dynamodb:ListStreams"
+                ],
+                Effect = "Allow"
+                Resource = aws_dynamodb_table.event_data_table.stream_arn
+            },
+            # Access for aggregator lambda to summaries table
+            {
+                Action = [ 
+                    "dynamodb:PutItem",
+                    "dynamodb:UpdateItem"
+                ]
+                Effect = "Allow"
+                Resource = aws_dynamodb_table.summaries_table.arn
             }
         ]
     })
@@ -213,8 +234,8 @@ resource "aws_lambda_function" "event_aggregator_lambda" {
     }
 }
 
-resource "aws_lambda_event_source_mapping" "event_data_stream" {
-    event_source_arn = aws_dynamodb_table.summaries_table.stream_arn
-    function_name = aws_lambda_function.event_aggregator_lambda.function_name
-    starting_position = "LATEST"
-}
+# resource "aws_lambda_event_source_mapping" "event_data_stream" {
+#     event_source_arn = aws_dynamodb_table.event_data_table.stream_arn
+#     function_name = aws_lambda_function.event_aggregator_lambda.function_name
+#     starting_position = "LATEST"
+# }
