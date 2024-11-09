@@ -48,6 +48,44 @@ Challenges that came up:
 1. Create the Event Aggregator Lambda
 1. Create Lambda Event Source Mapping to trigger the Event Aggregator Lambda from the Event Data DynamoDb Stream
 
+#### Run it!
+Execute `trigger-events.sh` to test out single events. 
+
+To verify Items are appearing in the Summary table, run:
+```sh
+aws dynamodb scan --table-name event-aggregator-summaries --output json
+```
+
+Example output:
+```json
+{
+    "Items": [
+        {
+            "ItemCount": {
+                "N": "131"
+            },
+            "SummaryID": {
+                "S": "{\"message\": \"Test event data\", \"value\": 3}"
+            }
+        },
+        {
+            "ItemCount": {
+                "N": "129"
+            },
+            "SummaryID": {
+                "S": "{\"message\": \"Test event data\", \"value\": 9}"
+            }
+        },
+        {
+            ...
+        }
+    ]
+}
+```
+
+To generate _a lot_ of data, run `trigger-multiple-events.sh`. Feel free to experiment with different batch sizes and durations.
+
+
 ### Deployment Diagram
 ```mermaid
 graph TD
