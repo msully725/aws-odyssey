@@ -1,5 +1,19 @@
 # AWS Odyssey
 
+- [AWS Odyssey](#aws-odyssey)
+  - [Set Up](#set-up)
+  - [ec2-ssh](#ec2-ssh)
+    - [Creating EC2 instances and SSH'ing to them](#creating-ec2-instances-and-sshing-to-them)
+  - [ec2-access-recovery](#ec2-access-recovery)
+  - [event-aggregator](#event-aggregator)
+    - [Create an API triggered data flow that aggregates data via event streaming](#create-an-api-triggered-data-flow-that-aggregates-data-via-event-streaming)
+      - [Create Data Producer API](#create-data-producer-api)
+      - [Create Data Aggregator Flow](#create-data-aggregator-flow)
+      - [Run it!](#run-it)
+    - [Deployment Diagram](#deployment-diagram)
+  - [webhook change event handler](#webhook-change-event-handler)
+
+
 ## Set Up
 1. Set up a new AWS account. For example, `abc-aws-odyssey`
 1. Set your AWS profile in `.env`
@@ -27,6 +41,11 @@
 1. Add an EC2 instance.
 1. Add a Route for SSH to EC2
 1. SSH to the EC2 instance, e.g. `ssh -i aws-odyssey-key-pair.pem ec2-user@[IP ADDRESS]`
+
+## ec2-access-recovery
+Instructions for recoverying access to an EC2 instance if the original Key Pair is lost. 
+
+[See the README](ec2-access-recovery/README.md)
 
 ## event-aggregator
 ### Create an API triggered data flow that aggregates data via event streaming
@@ -99,3 +118,5 @@ graph TD
     B -->|get-summary| H[Lambda - Summary Retriever]
     H --> G
 ```
+
+## webhook change event handler
