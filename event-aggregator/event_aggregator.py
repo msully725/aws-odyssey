@@ -18,7 +18,7 @@ def lambda_handler(event, context):
 
         response = summaries_table.update_item(
             Key={'SummaryID': event_message},
-            UpdateExpression="ADD Count :inc",
+            UpdateExpression="ADD ItemCount :inc",
             ExpressionAttributeValues={':inc':1},
             ReturnValues="UPDATED_NEW"
         )
