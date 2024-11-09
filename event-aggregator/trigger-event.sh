@@ -11,7 +11,8 @@ if [ -z "$API_ID" ]; then
 fi
 
 API_ENDPOINT="https://$API_ID.execute-api.$AWS_REGION.amazonaws.com/$STAGE_NAME/trigger-event"
-EVENT_DATA='{"message":"Test event data", "value": 1.0}'
+RANDOM_VALUE=$(( ( RANDOM % 10 ) + 1 ))
+EVENT_DATA="{\"message\":\"Test event data\", \"value\": $RANDOM_VALUE}"
 
 echo "Triggering event to $API_ENDPOINT ..."
 curl -X POST $API_ENDPOINT \
