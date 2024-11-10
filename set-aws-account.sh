@@ -21,10 +21,21 @@ echo "AWS_PROFILE: $AWS_PROFILE"
 
 # Verify the active account
 account_info=$(aws sts get-caller-identity 2>&1)
-if [ $? -ne 0 ]; then
-  echo "Error retrieving AWS account information:"
-  echo "$account_info"
-  return 1  # Use 'exit 1' if not sourcing
+if [[ $? -ne 0 ]]; then
+  if [[ "$account_info" == *"Error when retrieving token from sso: Token has expired and refresh failed"* ]]; then
+    echo "SSO token has expired. Attempting to refresh token..."
+    aws sso login
+    account_info=$(aws sts get-caller-identity 2>&1)
+    if [[ $? -ne 0 ]]; then
+      echo "Error retrieving AWS account information after SSO login:"
+      echo "$account_info"
+      exit 1  # Use 'exit 1' if not sourcing
+    fi
+  else
+    echo "Error retrieving AWS account information:"
+    echo "$account_info"
+    exit 1  # Use 'exit 1' if not sourcing
+  fi
 fi
 
 echo "You are now using the following account:"
