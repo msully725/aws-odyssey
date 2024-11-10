@@ -19,3 +19,10 @@ resource "aws_apigatewayv2_stage" "default_stage" {
     auto_deploy = true
 }
 
+# SQS
+resource "aws_sqs_queue" "webhook_event_queue" {
+    name = "webhook-event-queue"
+
+    visibility_timeout_seconds = 300 # 5 minutes
+    message_retention_seconds = 86400 # 1 day
+}
