@@ -6,12 +6,13 @@
     - [Creating EC2 instances and SSH'ing to them](#creating-ec2-instances-and-sshing-to-them)
   - [ec2-access-recovery](#ec2-access-recovery)
   - [event-aggregator](#event-aggregator)
-    - [Create an API triggered data flow that aggregates data via event streaming](#create-an-api-triggered-data-flow-that-aggregates-data-via-event-streaming)
-      - [Create Data Producer API](#create-data-producer-api)
-      - [Create Data Aggregator Flow](#create-data-aggregator-flow)
-      - [Run it!](#run-it)
     - [Deployment Diagram](#deployment-diagram)
-  - [webhook change event handler](#webhook-change-event-handler)
+    - [Create Data Producer API](#create-data-producer-api)
+    - [Create Data Aggregator Flow](#create-data-aggregator-flow)
+    - [Run it!](#run-it)
+  - [webhook-event-handler](#webhook-event-handler)
+    - [Deployment Diagram](#deployment-diagram-1)
+    - [Steps](#steps)
 
 
 ## Set Up
@@ -48,9 +49,23 @@ Instructions for recoverying access to an EC2 instance if the original Key Pair 
 [See the README](ec2-access-recovery/README.md)
 
 ## event-aggregator
-### Create an API triggered data flow that aggregates data via event streaming
+Create an API triggered data flow that aggregates data via event streaming
 
-#### Create Data Producer API
+### Deployment Diagram
+```mermaid
+graph TD
+    A[Users] -->|trigger-event| B[API Gateway]
+    A[Users] -->|get-summary| B
+    B -->|trigger-event| C[Lambda - Data Producer]
+    C --> D[DynamoDB - EventData]
+    D -->|trigger-event| E[DynamoDB Streams]
+    E --> F[Lambda - Data Aggregator]
+    F --> G[DynamoDB - Summaries]
+    B -->|get-summary| H[Lambda - Summary Retriever]
+    H --> G
+```
+
+### Create Data Producer API
 1. Add Dynamo tables
 1. Create Data Producer Lamba function python code
 1. Zip via script
@@ -62,12 +77,12 @@ Instructions for recoverying access to an EC2 instance if the original Key Pair 
 Challenges that came up:
 * We did some resource rename refactors and it appears not all of them stuck. Specifically the API Gateway was trying to call the Lambda's old URI. 
 
-#### Create Data Aggregator Flow
+### Create Data Aggregator Flow
 1. Create Event Data DynamoDb Stream
 1. Create the Event Aggregator Lambda
 1. Create Lambda Event Source Mapping to trigger the Event Aggregator Lambda from the Event Data DynamoDb Stream
 
-#### Run it!
+### Run it!
 Execute `trigger-events.sh` to test out single events. 
 
 To verify Items are appearing in the Summary table, run:
@@ -105,18 +120,24 @@ Example output:
 To generate _a lot_ of data, run `trigger-multiple-events.sh`. Feel free to experiment with different batch sizes and durations.
 
 
+## webhook-event-handler
+
+Handle inbound webhook events in a way that supports handling a high volume of events without bottlenecking when processing the events. An architeectural goal is to decouple receiving events from processing events to ensure we can record all events that are sent to us and avoid situations where our processing may not be able to keep up if we attempt to process all events as soon as they are recieved.
+
+To do this, a Webhook API will be recieve Events and enqueue them. An ECS task will subscribe to the queue and process events as they arrive. 
+
+BONUS: Set up auto-scaling to scale out the ECS Task should the Queue size grow too large. 
+
 ### Deployment Diagram
 ```mermaid
-graph TD
-    A[Users] -->|trigger-event| B[API Gateway]
-    A[Users] -->|get-summary| B
-    B -->|trigger-event| C[Lambda - Data Producer]
-    C --> D[DynamoDB - EventData]
-    D -->|trigger-event| E[DynamoDB Streams]
-    E --> F[Lambda - Data Aggregator]
-    F --> G[DynamoDB - Summaries]
-    B -->|get-summary| H[Lambda - Summary Retriever]
-    H --> G
+graph LR
+    A[Webhook Invoker] -->|Webhook Event| B[Amazon API Gateway]
+    B -->|Enqueue| C[Amazon SQS]
+    C -->|Dequeue| D[Amazon ECS]
+    D --> E[External API]
+    D --> F[Amazon RDS]
 ```
 
-## webhook change event handler
+### Steps
+1. Set up an API Gateway endpoint to receive the webhook events
+1. 
