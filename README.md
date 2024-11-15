@@ -140,4 +140,5 @@ graph LR
 
 ### Steps
 1. Set up an API Gateway endpoint to receive the webhook events
-1. 
+1. Add permissions for API Gateway to integrate with SQS 
+1. Create the API Gateway to SQS Integration
