@@ -14,6 +14,9 @@ data "aws_caller_identity" "current" {}
 # API Gateway
 resource "aws_api_gateway_rest_api" "webhook_event_handler_api" {
     name = "webhook-event-handler-api"
+    endpoint_configuration {
+        types = ["REGIONAL"]
+    }
 }
 
 resource "aws_api_gateway_resource" "webhook" {
@@ -66,38 +69,17 @@ resource "aws_api_gateway_method_settings" "webhook_method_settings" {
     }
 }
 
-# API Gateway to SQS Integration
-resource "aws_api_gateway_integration" "sqs_integration" {
+resource "aws_api_gateway_method_response" "webhook_method_response" {
+    depends_on = [ aws_api_gateway_method.post_webhook ]
+
     rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
     resource_id = aws_api_gateway_resource.webhook.id
     http_method = aws_api_gateway_method.post_webhook.http_method
-    type = "AWS"
+    status_code = 200
 
-    integration_http_method = "POST"
-    
-    uri = "arn:aws:apigateway:${var.region}:sqs:path/${data.aws_caller_identity.current.account_id}/${aws_sqs_queue.webhook_event_queue.name}"
-
-    credentials = aws_iam_role.api_gateway_role.arn
-
-    request_templates = {
-      "application/json" = <<EOF
-      {
-        "QueueUrl": "https://sqs.${var.region}.amazonaws.com/${data.aws_caller_identity.current.account_id}/${aws_sqs_queue.webhook_event_queue.name}",
-        "MessageBody": "$input.body"
-      }
-      EOF
+    response_models = {
+      "application/json" = "Empty"
     }
-}
-
-resource "aws_api_gateway_integration_response" "sqs_200_response" {
-  rest_api_id  = aws_api_gateway_rest_api.webhook_event_handler_api.id
-  resource_id  = aws_api_gateway_resource.webhook.id
-  http_method  = aws_api_gateway_method.post_webhook.http_method
-  status_code  = "200"
-
-  response_templates = {
-    "application/json" = "{\"message\": \"Message successfully enqueued\"}"
-  }
 }
 
 # SQS
@@ -145,4 +127,44 @@ resource "aws_iam_role" "api_gateway_role" {
 resource "aws_iam_role_policy_attachment" "api_gateway_sqs_policy_attachment" {
     role = aws_iam_role.api_gateway_role.name
     policy_arn = aws_iam_policy.api_gateway_sqs_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "sqs_full_access" {
+  role       = aws_iam_role.api_gateway_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+}
+
+# API Gateway to SQS Integration
+resource "aws_api_gateway_integration" "sqs_integration" {
+    rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
+    resource_id = aws_api_gateway_resource.webhook.id
+    http_method = aws_api_gateway_method.post_webhook.http_method
+    type = "AWS"
+
+    integration_http_method = "POST"
+
+    request_parameters = {
+        "integration.request.header.Content-Type" = "'application/x-www-form-urlencoded'" 
+    }
+    
+    uri = "arn:aws:apigateway:${var.region}:sqs:path/${data.aws_caller_identity.current.account_id}/${aws_sqs_queue.webhook_event_queue.name}"
+
+    credentials = aws_iam_role.api_gateway_role.arn
+
+    request_templates = {
+      "application/json" = "Action=SendMessage&MessageBody=$input.body"
+    }
+}
+
+resource "aws_api_gateway_integration_response" "sqs_200_response" {
+  depends_on = [ aws_api_gateway_integration.sqs_integration ]
+
+  rest_api_id  = aws_api_gateway_rest_api.webhook_event_handler_api.id
+  resource_id  = aws_api_gateway_resource.webhook.id
+  http_method  = aws_api_gateway_method.post_webhook.http_method
+  status_code  = "200"
+
+  response_templates = {
+    "application/json" = "{\"message\": \"Message successfully enqueued\"}"
+  }
 }
