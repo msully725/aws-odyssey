@@ -61,13 +61,37 @@ resource "aws_api_gateway_method_settings" "webhook_method_settings" {
 
 # MOCK Integration for POST Method
 resource "aws_api_gateway_integration" "mock_integration" {
-  rest_api_id             = aws_api_gateway_rest_api.webhook_event_handler_api.id
-  resource_id             = aws_api_gateway_resource.webhook.id
-  http_method             = aws_api_gateway_method.post_webhook.http_method
-  type                    = "MOCK"
+  rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
+  resource_id = aws_api_gateway_resource.webhook.id
+  http_method = aws_api_gateway_method.post_webhook.http_method
+  type = "MOCK"
   integration_http_method = "POST"
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "mock_integration_response" {
+    depends_on = [ aws_api_gateway_integration.mock_integration ]
+
+    rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
+    resource_id = aws_api_gateway_resource.webhook.id
+    http_method = aws_api_gateway_method.post_webhook.http_method
+    status_code = "200"
+
+    response_templates = {
+       "application/json" = "{\"message\": \"Integration Response Successful\"}"
+    }
+}
+
+resource "aws_api_gateway_method_response" "mock_method_response" {
+  rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
+  resource_id = aws_api_gateway_resource.webhook.id
+  http_method = aws_api_gateway_method.post_webhook.http_method
+  status_code = "200" # HTTP status code expected by the client
+
+  response_models = {
+    "application/json" = "Empty"
   }
 }
 
