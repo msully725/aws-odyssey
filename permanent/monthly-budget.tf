@@ -1,7 +1,3 @@
-provider "aws" {
-    region = "us-east-1"
-}
-
 resource "aws_budgets_budget" "monthly_budget" {
     name = "monthly-budget"
     time_unit = "MONTHLY"
