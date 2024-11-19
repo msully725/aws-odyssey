@@ -145,3 +145,7 @@ graph LR
    1. Be aware of stale stage deployments
 3. Add permissions for API Gateway to integrate with SQS 
 4. Create the API Gateway to SQS Integration
+    1. Big gotcha - using EOF for the `request-templates` result in leading spaces and breaking the request to SQS. 
+1. Create ECR and push a Python SQS consumer image
+1. Create ECS Task that uses Python SQS consumer image to consume from SQS
+1. Set up all the other ECS bits (VPC, cluster, task, service) to kick off a task!

@@ -235,7 +235,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 }
 
 resource "aws_ecs_task_definition" "webhook_event_handler_task_definition" {
-  family = "sqs-task"
+  family = "webhook-event-handler-task"
   requires_compatibilities = ["FARGATE"]
   network_mode = "awsvpc"
   memory = "512"
