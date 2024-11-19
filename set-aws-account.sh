@@ -29,12 +29,12 @@ if [[ $? -ne 0 ]]; then
     if [[ $? -ne 0 ]]; then
       echo "Error retrieving AWS account information after SSO login:"
       echo "$account_info"
-      exit 1  # Use 'exit 1' if not sourcing
+      return 1  # Use 'exit 1' if not sourcing
     fi
   else
     echo "Error retrieving AWS account information:"
     echo "$account_info"
-    exit 1  # Use 'exit 1' if not sourcing
+    return 1  # Use 'exit 1' if not sourcing
   fi
 fi
 
