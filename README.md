@@ -149,3 +149,4 @@ graph LR
 1. Create ECR and push a Python SQS consumer image
 1. Create ECS Task that uses Python SQS consumer image to consume from SQS
 1. Set up all the other ECS bits (VPC, cluster, task, service) to kick off a task!
+    1. Gotchas pop up around task role that has access to SQS queue, and making sure the task has public internet access to pull from ECR

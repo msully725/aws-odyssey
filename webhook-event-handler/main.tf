@@ -255,6 +255,48 @@ resource "aws_cloudwatch_log_group" "ecs_task_log_group" {
   retention_in_days = 7  # Optional, set to your desired retention period
 }
 
+resource "aws_iam_role" "ecs_task_role" {
+  name = "ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ecs_task_policy" {
+  name   = "ecs-task-policy"
+  role   = aws_iam_role.ecs_task_role.name
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sqs:ReceiveMessage",
+        Effect = "Allow",
+        Resource = aws_sqs_queue.webhook_event_queue.arn
+      },
+      {
+        Action = "sqs:DeleteMessage",
+        Effect = "Allow",
+        Resource = aws_sqs_queue.webhook_event_queue.arn
+      },
+      {
+        Action = "sqs:GetQueueAttributes",
+        Effect = "Allow",
+        Resource = aws_sqs_queue.webhook_event_queue.arn
+      }
+    ]
+  })
+}
+
 resource "aws_ecs_task_definition" "webhook_event_handler_task_definition" {
   family = "webhook-event-handler-task"
   requires_compatibilities = ["FARGATE"]
@@ -263,6 +305,7 @@ resource "aws_ecs_task_definition" "webhook_event_handler_task_definition" {
   cpu = "256"
 
   execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
