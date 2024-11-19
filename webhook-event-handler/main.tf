@@ -179,18 +179,34 @@ resource "aws_vpc" "webhook_vpc" {
   }
 }
 
-resource "aws_subnet" "webhook_subnet" {
-  count                  = 2
-  vpc_id                 = aws_vpc.webhook_vpc.id
-  cidr_block             = cidrsubnet(aws_vpc.webhook_vpc.cidr_block, 8, count.index)
-  availability_zone      = data.aws_availability_zones.available.names[count.index]
-  map_public_ip_on_launch = true
-  tags = {
-    Name = "webhook-subnet-${count.index}"
+# Tasks Public Subnet
+resource "aws_internet_gateway" "webhook_igw" {
+  vpc_id = aws_vpc.webhook_vpc.id
+}
+
+resource "aws_route_table" "webhook_public_route_table" {
+  vpc_id = aws_vpc.webhook_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.webhook_igw.id
   }
 }
 
-data "aws_availability_zones" "available" {}
+resource "aws_subnet" "webhook_public_subnet" {
+    vpc_id                  = aws_vpc.webhook_vpc.id
+    cidr_block              = "10.0.1.0/24"
+    map_public_ip_on_launch = true
+
+    tags = {
+        Name = "webhook-public-subnet"
+    }
+}
+
+resource "aws_route_table_association" "public_subnet_association" {
+    subnet_id      = aws_subnet.webhook_public_subnet.id
+    route_table_id = aws_route_table.webhook_public_route_table.id
+}
 
 resource "aws_security_group" "ecs_task_sg" {
   name   = "ecs-task-sg"
@@ -275,7 +291,7 @@ resource "aws_ecs_service" "webhook_event_handler_service" {
   desired_count = 1
 
   network_configuration {
-    subnets = aws_subnet.webhook_subnet[*].id
+    subnets = aws_subnet.webhook_public_subnet[*].id
     security_groups = [aws_security_group.ecs_task_sg.id]
     assign_public_ip = true
   }
