@@ -10,20 +10,38 @@ provider "aws" {
 }
 
 # API Gateway
-resource "aws_apigatewayv2_api" "webhook_event_handler_api" {
+resource "aws_api_gateway_rest_api" "webhook_event_handler_api" {
     name = "webhook-event-handler-api"
-    protocol_type = "HTTP"
 }
 
-resource "aws_apigatewayv2_route" "webhook-route" {
-    api_id = aws_apigatewayv2_api.webhook_event_handler_api.id
-    route_key = "POST /webhook"
+resource "aws_api_gateway_resource" "webhook" {
+    rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
+    parent_id = aws_api_gateway_rest_api.webhook_event_handler_api.root_resource_id
+    path_part = "webhook"
 }
 
-resource "aws_apigatewayv2_stage" "default_stage" {
-    api_id = aws_apigatewayv2_api.webhook_event_handler_api.id
-    name = "dev"
-    auto_deploy = true
+resource "aws_api_gateway_method" "post_webhook" {
+    rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
+    resource_id = aws_api_gateway_resource.webhook.id
+    http_method = "POST"
+    authorization = "NONE"
+}
+
+resource "aws_api_gateway_deployment" "webhook_api_deployment" {
+    rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
+    stage_name = "dev"
+}
+
+# MOCK Integration for POST Method
+resource "aws_api_gateway_integration" "mock_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.webhook_event_handler_api.id
+  resource_id             = aws_api_gateway_resource.webhook.id
+  http_method             = aws_api_gateway_method.post_webhook.http_method
+  type                    = "MOCK"
+  integration_http_method = "POST"
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
 }
 
 # SQS
@@ -71,11 +89,4 @@ resource "aws_iam_role" "api_gateway_role" {
 resource "aws_iam_role_policy_attachment" "api_gateway_sqs_policy_attachment" {
     role = aws_iam_role.api_gateway_role.name
     policy_arn = aws_iam_policy.api_gateway_sqs_policy.arn
-}
-
-resource "aws_apigatewayv2_integration" "sqs_integration" {
-    api_id = aws_apigatewayv2_api.webhook_event_handler_api.id
-    integration_type = "AWS_PROXY"
-    integration_uri = "arn:aws:apigateway:${var.region}:sqs:path/${aws_sqs_queue.webhook_event_queue.name}"
-    credentials_arn = aws_iam_role.api_gateway_role.arn
 }
