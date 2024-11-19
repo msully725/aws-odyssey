@@ -129,10 +129,10 @@ resource "aws_iam_role_policy_attachment" "api_gateway_sqs_policy_attachment" {
     policy_arn = aws_iam_policy.api_gateway_sqs_policy.arn
 }
 
-resource "aws_iam_role_policy_attachment" "sqs_full_access" {
-  role       = aws_iam_role.api_gateway_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
-}
+# resource "aws_iam_role_policy_attachment" "sqs_full_access" {
+#   role       = aws_iam_role.api_gateway_role.name
+#   policy_arn = "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+# }
 
 # API Gateway to SQS Integration
 resource "aws_api_gateway_integration" "sqs_integration" {
@@ -167,4 +167,10 @@ resource "aws_api_gateway_integration_response" "sqs_200_response" {
   response_templates = {
     "application/json" = "{\"message\": \"Message successfully enqueued\"}"
   }
+}
+
+# Outputs
+output "api_gateway_deployed_url" {
+  description = "The URL of the deployed API Gateway"
+  value       = "https://${aws_api_gateway_rest_api.webhook_event_handler_api.id}.execute-api.${var.region}.amazonaws.com/${aws_api_gateway_stage.webhook_stage.stage_name}/webhook"
 }
