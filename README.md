@@ -141,6 +141,7 @@ graph LR
 ### Steps
 1. Set up an API Gateway endpoint to receive the webhook events
 2. Test out the API Gateway Endpoint
-   1.  Set up CloudWatch logging to troubleshoot it 🙃
+   1. Set up CloudWatch logging to troubleshoot it 🙃
+   1. Be aware of stale stage deployments
 3. Add permissions for API Gateway to integrate with SQS 
 4. Create the API Gateway to SQS Integration
