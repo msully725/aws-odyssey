@@ -27,9 +27,23 @@ resource "aws_api_gateway_method" "post_webhook" {
     authorization = "NONE"
 }
 
+resource "aws_cloudwatch_log_group" "api_gateway_logs" {
+    name = "/aws/apigateway/webhook-event-handler"
+}
+
 resource "aws_api_gateway_deployment" "webhook_api_deployment" {
     rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
+}
+
+resource "aws_api_gateway_stage" "webhook_stage" {
+    deployment_id = aws_api_gateway_deployment.webhook_api_deployment.id
+    rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
     stage_name = "dev"
+
+    access_log_settings {
+        destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
+        format          = "requestId: $context.requestId, status: $context.status, error: $context.error.message"
+    }
 }
 
 # MOCK Integration for POST Method
