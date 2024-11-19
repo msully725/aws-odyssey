@@ -34,6 +34,11 @@ resource "aws_cloudwatch_log_group" "api_gateway_logs" {
 }
 
 resource "aws_api_gateway_deployment" "webhook_api_deployment" {
+     depends_on = [
+        aws_api_gateway_method.post_webhook,
+        aws_api_gateway_integration.sqs_integration
+    ]
+
     rest_api_id = aws_api_gateway_rest_api.webhook_event_handler_api.id
 }
 
@@ -69,7 +74,8 @@ resource "aws_api_gateway_integration" "sqs_integration" {
     type = "AWS"
 
     integration_http_method = "POST"
-    uri = "arn:aws:apigateway:${var.region}:sqs:path/${aws_sqs_queue.webhook_event_queue.name}"
+    
+    uri = "arn:aws:apigateway:${var.region}:sqs:path/${data.aws_caller_identity.current.account_id}/${aws_sqs_queue.webhook_event_queue.name}"
 
     credentials = aws_iam_role.api_gateway_role.arn
 
@@ -81,6 +87,17 @@ resource "aws_api_gateway_integration" "sqs_integration" {
       }
       EOF
     }
+}
+
+resource "aws_api_gateway_integration_response" "sqs_200_response" {
+  rest_api_id  = aws_api_gateway_rest_api.webhook_event_handler_api.id
+  resource_id  = aws_api_gateway_resource.webhook.id
+  http_method  = aws_api_gateway_method.post_webhook.http_method
+  status_code  = "200"
+
+  response_templates = {
+    "application/json" = "{\"message\": \"Message successfully enqueued\"}"
+  }
 }
 
 # SQS
