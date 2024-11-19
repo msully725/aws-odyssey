@@ -250,6 +250,11 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_cloudwatch_log_group" "ecs_task_log_group" {
+  name = "/ecs/webhook-event-handler-task"
+  retention_in_days = 7  # Optional, set to your desired retention period
+}
+
 resource "aws_ecs_task_definition" "webhook_event_handler_task_definition" {
   family = "webhook-event-handler-task"
   requires_compatibilities = ["FARGATE"]
@@ -274,12 +279,16 @@ resource "aws_ecs_task_definition" "webhook_event_handler_task_definition" {
         logDriver = "awslogs"
         options = {
           awslogs-region = var.region
-          awslogs-group = "/ecs/webhook-event-handler-task"
+          awslogs-group = aws_cloudwatch_log_group.ecs_task_log_group.name
           awslogs-stream-prefix = "ecs"
         }
       }
     }
   ])
+
+  runtime_platform {
+    cpu_architecture = "ARM64"
+  }
 }
 
 resource "aws_ecs_service" "webhook_event_handler_service" {
