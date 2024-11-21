@@ -375,7 +375,8 @@ resource "aws_iam_role_policy" "ecs_task_dynamodb_policy" {
         Action = [
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
-          "dynambodb:GetItem"
+          "dynamodb:GetItem",
+          "dynamodb:Scan"
         ],
         Effect = "Allow",
         Resource = aws_dynamodb_table.entity_event_table.arn
