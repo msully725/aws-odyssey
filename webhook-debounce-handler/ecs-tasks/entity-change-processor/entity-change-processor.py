@@ -11,7 +11,7 @@ def process_records():
     print(f"Scanning for entities to process")
 
     now = datetime.utcnow()
-    cutoff = now - timedelta(minutes=1)
+    cutoff = now - timedelta(seconds=15)
     cutoff_timestamp = cutoff.isoformat()
 
     # Scan for items older than 1 minute
