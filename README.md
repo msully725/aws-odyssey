@@ -177,4 +177,7 @@ Track an Entity change event time, and a last processed time. For all entities t
 ### Steps
 1. Build off of `webhook-event-handler`
 2. Add DynamoDb table
-3. 
+3. Add Entity Change Processor ECS Task
+   1. Add the image and deploy it
+   2. Bonus - Command to restart the task, causing it to pull latest image:
+      1. `aws ecs update-service --cluster webhook-event-handler-cluster --service entity-change-processor-service --force-new-deployment`
