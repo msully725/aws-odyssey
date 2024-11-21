@@ -316,6 +316,10 @@ resource "aws_ecs_task_definition" "webhook_event_handler_task_definition" {
         {
           name  = "SQS_QUEUE_URL",
           value = aws_sqs_queue.webhook_event_queue.url
+        },
+        {
+          name  = "DYNAMODB_TABLE_NAME",
+          value = aws_dynamodb_table.entity_event_table.name
         }
       ],
       logConfiguration = {
@@ -376,6 +380,7 @@ resource "aws_iam_role_policy" "ecs_task_dynamodb_policy" {
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
           "dynamodb:GetItem",
+          "dynamodb:DeleteItem",
           "dynamodb:Scan"
         ],
         Effect = "Allow",
