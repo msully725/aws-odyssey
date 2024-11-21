@@ -1,14 +1,21 @@
 import boto3
 import os
 import time
+import json
+from datetime import datetime
 
-# Fetch the SQS queue URL from the environment
+# Fetch the SQS queue URL and DynamoDB table name from the environment
 queue_url = os.getenv("SQS_QUEUE_URL")
 if not queue_url:
     raise ValueError("Environment variable SQS_QUEUE_URL is not set")
 
-# Initialize SQS client
+dynamodb_table_name = os.getenv("DYNAMODB_TABLE_NAME")
+if not dynamodb_table_name:
+    raise ValueError("Environment variable DYNAMODB_TABLE_NAME is not set")
+
+# Initialize AWS clients
 sqs = boto3.client("sqs", region_name="us-east-1")
+dynamodb = boto3.client("dynamodb", region_name="us-east-1")
 
 def process_messages():
     """
@@ -28,11 +35,8 @@ def process_messages():
                 for message in response["Messages"]:
                     print(f"Processing message: {message['Body']}")
 
-                    # Process the message (custom logic goes here)
-                    # Example: Print the message body
                     handle_message(message["Body"])
 
-                    # Delete the message from the queue after processing
                     sqs.delete_message(
                         QueueUrl=queue_url,
                         ReceiptHandle=message["ReceiptHandle"]
@@ -47,10 +51,27 @@ def process_messages():
 
 def handle_message(message_body):
     """
-    Placeholder for custom message processing logic.
-    Replace this function with your business logic.
+    Process the message and store/update it in DynamoDB.
     """
-    print(f"Handling message: {message_body}")
+    try:
+        message = json.loads(message_body)
+        entity_id = message.get("Id")
+        if not entity_id:
+            raise ValueError("Message does not contain 'Id'")
+
+        current_time = datetime.utcnow().isoformat()
+
+        dynamodb.put_item(
+            TableName=dynamodb_table_name,
+            Item={
+                "EntityId": {"S": entity_id},
+                "LastEventTime": {"S": current_time}
+            }
+        )
+        print(f"Stored EntityId: {entity_id} with timestamp: {current_time}")
+
+    except Exception as e:
+        print(f"Error handling message: {e}")
 
 if __name__ == "__main__":
     process_messages()
