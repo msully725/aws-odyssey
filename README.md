@@ -13,6 +13,10 @@
   - [webhook-event-handler](#webhook-event-handler)
     - [Deployment Diagram](#deployment-diagram-1)
     - [Steps](#steps)
+  - [webhook-debounce-handler](#webhook-debounce-handler)
+    - [Deployment Diagram](#deployment-diagram-2)
+    - [Design Note](#design-note)
+    - [Steps](#steps-1)
 
 
 ## Set Up
@@ -150,3 +154,26 @@ graph LR
 1. Create ECS Task that uses Python SQS consumer image to consume from SQS
 1. Set up all the other ECS bits (VPC, cluster, task, service) to kick off a task!
     1. Gotchas pop up around task role that has access to SQS queue, and making sure the task has public internet access to pull from ECR
+1. _ToDo_: Finish this experiment by connecting the Task to RDS and simulate calling an external API. The goal to demonstrate the Webhook API can get hammered, and work will simply queue up until the task consumes it. Bonus: auto-scaling if single task cannot keep up (can add sleeps on the API call to simiulate delays)
+
+## webhook-debounce-handler
+A webhook event signals when an entitiy in another system has changed. Events can happen for many small changes happening close together. The event does not contain state, we have to request state. To minimize expensive calls to request state, debouncing will be used to only attempt a state request when change events have stopped for a period of time.
+
+### Deployment Diagram
+```mermaid
+graph LR
+    A[Webhook Event Source] --> B[Amazon API Gateway]
+    B --> C[Amazon SQS]
+    C --> D[Amazon ECS Task: Webhook Event Handler]
+    D -->|Mark Entity Edited| E[Amazon DynamoDB: Edited Entity Tracking]
+    E -->|Query for Edited Entities| F[Amazon ECS Task: Process ]
+    F --> G[External API]
+    F --> H[Amazon RDS: App Database]
+```
+
+### Design Note
+Track an Entity change event time, and a last processed time. For all entities that have last processed and change event times older than 1 minute, process them. Update last processed time. Can also consider deleting the entity change tracking record after processing to avoid needing to manage last processed time. If a change record exists, it needs to be procssed, just wait until it hasn't changed in 1 minute.  
+
+### Steps
+1. Build off of `webhook-event-handler`
+2. 
