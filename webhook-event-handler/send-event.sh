@@ -11,7 +11,7 @@ fi
 MESSAGE_PAYLOAD=$1
 
 # API Gateway URL
-API_URL="https://9qhepjnfgc.execute-api.us-east-1.amazonaws.com/dev/webhook"
+API_URL="https://bpz4ot2kac.execute-api.us-east-1.amazonaws.com/dev/webhook"
 
 # Make the API request
 curl -X POST $API_URL \

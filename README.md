@@ -176,4 +176,5 @@ Track an Entity change event time, and a last processed time. For all entities t
 
 ### Steps
 1. Build off of `webhook-event-handler`
-2. 
+2. Add DynamoDb table
+3. 

@@ -349,6 +349,40 @@ resource "aws_ecs_service" "webhook_event_handler_service" {
   }
 }
 
+resource "aws_dynamodb_table" "entity_event_table" {
+  name = "EntityEventTable"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "EntityId"
+
+  attribute {
+    name = "EntityId"
+    type = "S"
+  }
+
+  tags = {
+    Name = "EntityEventTable"
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_task_dynamodb_policy" {
+  name = "ecs-task-dynamodb-policy"
+  role = aws_iam_role.ecs_task_role.name
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynambodb:GetItem"
+        ],
+        Effect = "Allow",
+        Resource = aws_dynamodb_table.entity_event_table.arn
+      }
+    ]
+  })
+}
+
 # Outputs
 output "api_gateway_deployed_url" {
   description = "The URL of the deployed API Gateway"
