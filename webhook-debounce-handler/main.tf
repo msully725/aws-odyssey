@@ -349,6 +349,7 @@ resource "aws_ecs_service" "webhook_event_handler_service" {
   }
 }
 
+# Entity Event Table
 resource "aws_dynamodb_table" "entity_event_table" {
   name = "EntityEventTable"
   billing_mode = "PAY_PER_REQUEST"
@@ -381,6 +382,68 @@ resource "aws_iam_role_policy" "ecs_task_dynamodb_policy" {
       }
     ]
   })
+}
+
+# Entity Change Processor ECS
+resource "aws_ecr_repository" "entity_change_processor_repo" {
+  name = "entity-change-processor-repo"
+}
+
+resource "aws_ecs_task_definition" "entity_change_processor_task_definition" {
+  family                   = "entity-change-processor-task"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  memory                   = "512"
+  cpu                      = "256"
+
+  execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn      = aws_iam_role.ecs_task_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name        = "entity-processor",
+      image       = "${aws_ecr_repository.entity_change_processor_repo.repository_url}:latest",
+      essential   = true,
+      environment = [
+        {
+          name  = "DYNAMODB_TABLE_NAME",
+          value = aws_dynamodb_table.entity_event_table.name
+        }
+      ],
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-region        = var.region
+          awslogs-group         = aws_cloudwatch_log_group.entity_processor_log_group.name
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+
+  runtime_platform {
+    cpu_architecture = "ARM64"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "entity_processor_log_group" {
+  name              = "/ecs/entity-change-processor"
+  retention_in_days = 7
+}
+
+resource "aws_ecs_service" "entity_change_processor_service" {
+  name            = "entity-change-processor-service"
+  cluster         = aws_ecs_cluster.webhook_event_handler_cluster.id
+  task_definition = aws_ecs_task_definition.entity_change_processor_task_definition.arn
+  launch_type     = "FARGATE"
+
+  desired_count = 1
+
+  network_configuration {
+    subnets         = aws_subnet.webhook_public_subnet[*].id
+    security_groups = [aws_security_group.ecs_task_sg.id]
+    assign_public_ip = true
+  }
 }
 
 # Outputs
