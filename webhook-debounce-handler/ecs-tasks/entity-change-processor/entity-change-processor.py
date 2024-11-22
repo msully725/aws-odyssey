@@ -18,7 +18,10 @@ def process_records():
 
     # Scan for items that meet the debounce or continuous processing thresholds
     response = table.scan(
-        FilterExpression="LastEventTime < :debounce OR LastProcessedTime < :continuous",
+        FilterExpression=(
+            "LastEventTime < :debounce AND "
+            "(attribute_not_exists(LastProcessedTime) OR LastProcessedTime < :continuous)"
+        ),
         ExpressionAttributeValues={
             ":debounce": debounce_cutoff.isoformat(),
             ":continuous": continuous_cutoff.isoformat()
