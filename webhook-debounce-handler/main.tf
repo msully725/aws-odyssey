@@ -452,6 +452,23 @@ resource "aws_ecs_service" "entity_change_processor_service" {
   }
 }
 
+resource "aws_iam_role_policy" "ecs_task_cloudwatch_policy" {
+  name = "ecs-task-cloudwatch_policy"
+  role = aws_iam_role.ecs_task_role.name
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "cloudwatch:PutMetricData"
+        ],
+        Effect = "Allow"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # Outputs
 output "api_gateway_deployed_url" {
   description = "The URL of the deployed API Gateway"

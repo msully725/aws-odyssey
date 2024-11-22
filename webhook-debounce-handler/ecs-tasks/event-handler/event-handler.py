@@ -16,6 +16,7 @@ if not dynamodb_table_name:
 # Initialize AWS clients
 sqs = boto3.client("sqs", region_name="us-east-1")
 dynamodb = boto3.client("dynamodb", region_name="us-east-1")
+cloudwatch = boto3.client("cloudwatch", region_name="us-east-1")
 
 def process_messages():
     """
@@ -36,12 +37,10 @@ def process_messages():
                     print(f"Processing message: {message['Body']}")
 
                     handle_message(message["Body"])
+                    publish_metric("WebhookEventsCount", 1)
+                    cleanup_message(message["ReceiptHandle"])
 
-                    sqs.delete_message(
-                        QueueUrl=queue_url,
-                        ReceiptHandle=message["ReceiptHandle"]
-                    )
-                    print(f"Message deleted: {message['MessageId']}")
+                    print(f"Message processed: {message['MessageId']}")
             else:
                 print("No messages received. Waiting for more...")
 
@@ -72,6 +71,31 @@ def handle_message(message_body):
 
     except Exception as e:
         print(f"Error handling message: {e}")
+
+def cleanup_message(receiptHandle):
+    sqs.delete_message(
+        QueueUrl=queue_url,
+        ReceiptHandle=receiptHandle
+    )
+
+def publish_metric(metric_name, value):
+    """
+    Publish custom metrics to CloudWatch.
+    """
+    try:
+        cloudwatch.put_metric_data(
+            Namespace="EntityProcessor",
+            MetricData=[
+                {
+                    "MetricName": metric_name,
+                    "Value": value,
+                    "Unit": "Count"
+                }
+            ]
+        )
+        print(f"Published metric {metric_name} with value {value}")
+    except Exception as e:
+        print(f"Failed to publish metric {metric_name}: {e}")
 
 if __name__ == "__main__":
     process_messages()
