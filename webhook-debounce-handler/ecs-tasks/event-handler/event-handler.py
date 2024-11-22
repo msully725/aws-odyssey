@@ -93,7 +93,6 @@ def publish_metric(metric_name, value):
                 }
             ]
         )
-        print(f"Published metric {metric_name} with value {value}")
     except Exception as e:
         print(f"Failed to publish metric {metric_name}: {e}")
 
