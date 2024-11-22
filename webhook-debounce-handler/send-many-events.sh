@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Default maximum number of outstanding requests
-DEFAULT_MAX_REQUESTS=20
 DEFAULT_DURATION=60
+DEFAULT_MAX_REQUESTS=20
 DEFAULT_ID_CEILING=10
 
 # Get the duration, max requests, and ID ceiling from the command-line arguments
