@@ -13,23 +13,31 @@ def process_records():
     print(f"Scanning for entities to process")
 
     now = datetime.utcnow()
-    cutoff = now - timedelta(seconds=15)
-    cutoff_timestamp = cutoff.isoformat()
+    debounce_cutoff = now - timedelta(seconds=15)
+    continuous_cutoff = now - timedelta(minutes=1)
 
-    # Scan for items older than 1 minute
+    # Scan for items that meet the debounce or continuous processing thresholds
     response = table.scan(
-        FilterExpression="LastEventTime < :cutoff",
-        ExpressionAttributeValues={":cutoff": cutoff_timestamp}
+        FilterExpression="LastEventTime < :debounce OR LastProcessedTime < :continuous",
+        ExpressionAttributeValues={
+            ":debounce": debounce_cutoff.isoformat(),
+            ":continuous": continuous_cutoff.isoformat()
+        }
     )
+
     for item in response.get("Items", []):
         entity_id = item["EntityId"]
         # Process the entity here
         print(f"Processing entity {entity_id}")
 
-        publish_metric("ProcessedCount", 1)
+        # Update the last processed time instead of deleting the record
+        table.update_item(
+            Key={"EntityId": entity_id},
+            UpdateExpression="SET LastProcessedTime = :now",
+            ExpressionAttributeValues={":now": now.isoformat()}
+        )
 
-        # Delete the item after processing
-        table.delete_item(Key={"EntityId": entity_id})
+        publish_metric("ProcessedCount", 1)
 
 def publish_metric(metric_name, value):
     """
