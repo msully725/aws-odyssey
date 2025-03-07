@@ -4,6 +4,7 @@ import json
 import tarfile
 import os
 import re
+from stat import S_ISDIR
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -17,19 +18,16 @@ SECRET_NAME = os.getenv("SECRET_NAME")
 REMOTE_PATH = os.getenv("REMOTE_PATH")
 LOCAL_BACKUP_PATH = os.getenv("LOCAL_BACKUP_PATH")
 S3_BUCKET = os.getenv("S3_BUCKET")
-DEFAULT_SFTP_PORT = int(os.getenv("SFTP_PORT", 22))  # Default to port 22 if not set
+DEFAULT_SFTP_PORT = int(os.getenv("SFTP_PORT", 22))
 
 def parse_sftp_host(sftp_host):
-    """Extract hostname and port if the port is included in the host string."""
-    # Remove protocol prefix if present
+    """Extract hostname and port if included in the host string."""
     sftp_host = sftp_host.replace("sftp://", "").strip()
-
-    # Extract port if included
     match = re.match(r"^(.*?):(\d+)$", sftp_host)
     if match:
         host, port = match.groups()
         return host, int(port)
-    return sftp_host, DEFAULT_SFTP_PORT  # Default to port 22
+    return sftp_host, DEFAULT_SFTP_PORT
 
 def get_sftp_credentials():
     """Fetch SFTP credentials from AWS Secrets Manager and extract host & port properly."""
@@ -38,11 +36,8 @@ def get_sftp_credentials():
     secret_value = secrets_client.get_secret_value(SecretId=SECRET_NAME)
     credentials = json.loads(secret_value["SecretString"])
 
-    # Extract hostname & port (and remove "sftp://")
     raw_host = credentials["SFTP_HOST"].strip()
     sftp_host, extracted_port = parse_sftp_host(raw_host)
-
-    # Use extracted port if available, otherwise check Secrets Manager
     sftp_port = int(credentials.get("SFTP_PORT", extracted_port))
 
     print(f"✅ Using SFTP Host: {sftp_host}, Port: {sftp_port}")
@@ -72,10 +67,10 @@ def connect_sftp():
             port=SFTP_PORT, 
             username=SFTP_USER, 
             password=SFTP_PASSWORD, 
-            allow_agent=False,  # Prevents SSH key authentication
+            allow_agent=False  
         )
         print("✅ Successfully connected via SFTP!")
-        return ssh.open_sftp(), ssh  # Return both the SFTP session and the SSH connection
+        return ssh.open_sftp(), ssh  
     except paramiko.AuthenticationException:
         print("❌ Authentication failed! Check your username and password.")
     except paramiko.SSHException as e:
@@ -83,13 +78,37 @@ def connect_sftp():
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
     
-    return None, None  # Return None if the connection fails
+    return None, None  
+
+def is_sftp_directory(sftp, remote_path):
+    """Check if a remote path is a directory on the SFTP server."""
+    try:
+        return S_ISDIR(sftp.stat(remote_path).st_mode)
+    except IOError:
+        return False
+
+def download_sftp_directory(sftp, remote_path, local_path):
+    """Recursively download directories from SFTP to local storage."""
+    os.makedirs(local_path, exist_ok=True)
+
+    for item in sftp.listdir(remote_path):
+        remote_item_path = f"{remote_path}/{item}"
+        local_item_path = os.path.join(local_path, item)
+
+        try:
+            if is_sftp_directory(sftp, remote_item_path):
+                print(f"📂 Creating directory: {local_item_path}")
+                download_sftp_directory(sftp, remote_item_path, local_item_path)
+            else:
+                print(f"⬇ Downloading file: {remote_item_path} → {local_item_path}")
+                sftp.get(remote_item_path, local_item_path)
+        except Exception as e:
+            print(f"❌ Error downloading {remote_item_path}: {e}")
 
 def backup_sftp_data():
     """Connect to SFTP, download files, compress them, and upload to S3."""
     print("🔹 Starting backup process...")
 
-    # Establish SFTP connection
     sftp, ssh = connect_sftp()
     if not sftp or not ssh:
         print("❌ Failed to connect to SFTP. Exiting backup process.")
@@ -97,18 +116,13 @@ def backup_sftp_data():
 
     print("✅ SFTP session opened.")
 
-    # Ensure local backup directory exists
     os.makedirs("/tmp/data", exist_ok=True)
 
-    print(f"🔹 Downloading files from {REMOTE_PATH}...")
+    print(f"🔹 Downloading from {REMOTE_PATH}...")
     try:
-        for file in sftp.listdir(REMOTE_PATH):
-            remote_file_path = f"{REMOTE_PATH}/{file}"
-            local_file_path = f"/tmp/data/{file}"
-            print(f"⬇ Downloading {file}...")
-            sftp.get(remote_file_path, local_file_path)
+        download_sftp_directory(sftp, REMOTE_PATH, "/tmp/data")
     except Exception as e:
-        print(f"❌ Error downloading files: {e}")
+        print(f"❌ Error during download: {e}")
         return {"status": f"Error downloading files: {e}"}
 
     sftp.close()
@@ -144,7 +158,6 @@ def backup_sftp_data():
 def lambda_handler(event, context):
     return backup_sftp_data()
 
-# Run locally if executed directly
 if __name__ == "__main__":
     print("🔹 Running backup locally...")
     backup_sftp_data()
