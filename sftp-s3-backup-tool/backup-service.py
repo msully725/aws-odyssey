@@ -19,6 +19,7 @@ REMOTE_PATH = os.getenv("REMOTE_PATH")
 LOCAL_BACKUP_PATH = os.getenv("LOCAL_BACKUP_PATH")
 S3_BUCKET = os.getenv("S3_BUCKET")
 DEFAULT_SFTP_PORT = int(os.getenv("SFTP_PORT", 22))
+TEMP_LOCAL_PATH = "/tmp/data"  # Define the temporary directory for backups
 
 def parse_sftp_host(sftp_host):
     """Extract hostname and port if included in the host string."""
@@ -89,7 +90,15 @@ def is_sftp_directory(sftp, remote_path):
 
 def download_sftp_directory(sftp, remote_path, local_path):
     """Recursively download directories from SFTP to local storage."""
-    os.makedirs(local_path, exist_ok=True)
+    if os.path.exists(local_path):
+        if not os.path.isdir(local_path):  
+            print(f"⚠️ Conflict detected: {local_path} exists as a file. Removing it.")
+            os.remove(local_path)
+        else:
+            print(f"📂 Directory already exists: {local_path}")
+    else:
+        print(f"📂 Creating directory: {local_path}")
+        os.makedirs(local_path, exist_ok=True)
 
     for item in sftp.listdir(remote_path):
         remote_item_path = f"{remote_path}/{item}"
@@ -97,7 +106,6 @@ def download_sftp_directory(sftp, remote_path, local_path):
 
         try:
             if is_sftp_directory(sftp, remote_item_path):
-                print(f"📂 Creating directory: {local_item_path}")
                 download_sftp_directory(sftp, remote_item_path, local_item_path)
             else:
                 print(f"⬇ Downloading file: {remote_item_path} → {local_item_path}")
@@ -106,8 +114,13 @@ def download_sftp_directory(sftp, remote_path, local_path):
             print(f"❌ Error downloading {remote_item_path}: {e}")
 
 def backup_sftp_data():
-    """Connect to SFTP, download files, compress them, and upload to S3."""
+    """Connect to SFTP, clear old data, download files, compress them, and upload to S3."""
     print("🔹 Starting backup process...")
+
+    # ✅ Ensure a clean directory before downloading
+    if os.path.exists(TEMP_LOCAL_PATH):
+        print("🧹 Clearing old backup data...")
+        os.system(f"rm -rf {TEMP_LOCAL_PATH}")
 
     sftp, ssh = connect_sftp()
     if not sftp or not ssh:
@@ -116,11 +129,11 @@ def backup_sftp_data():
 
     print("✅ SFTP session opened.")
 
-    os.makedirs("/tmp/data", exist_ok=True)
+    os.makedirs(TEMP_LOCAL_PATH, exist_ok=True)  # Ensure fresh directory
 
     print(f"🔹 Downloading from {REMOTE_PATH}...")
     try:
-        download_sftp_directory(sftp, REMOTE_PATH, "/tmp/data")
+        download_sftp_directory(sftp, REMOTE_PATH, TEMP_LOCAL_PATH)
     except Exception as e:
         print(f"❌ Error during download: {e}")
         return {"status": f"Error downloading files: {e}"}
@@ -132,7 +145,7 @@ def backup_sftp_data():
     print("🔹 Compressing backup...")
     try:
         with tarfile.open(LOCAL_BACKUP_PATH, "w:gz") as tar:
-            tar.add("/tmp/data", arcname="data")
+            tar.add(TEMP_LOCAL_PATH, arcname="data")
         print("✅ Backup compressed.")
     except Exception as e:
         print(f"❌ Error compressing backup: {e}")
@@ -150,7 +163,7 @@ def backup_sftp_data():
         return {"status": f"Error uploading to S3: {e}"}
 
     print("🔹 Cleaning up temporary files...")
-    os.system("rm -rf /tmp/data /tmp/backup.tar.gz")
+    os.system(f"rm -rf {TEMP_LOCAL_PATH} {LOCAL_BACKUP_PATH}")
 
     print("✅ Backup process completed successfully.")
     return {"status": "Backup successful"}
