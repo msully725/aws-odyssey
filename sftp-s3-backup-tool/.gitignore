@@ -1,3 +1,6 @@
+__pycache__/
 package/
 venv/
+.venv/
 backup-service.zip
+cdk.out/
