@@ -6,7 +6,8 @@ from aws_cdk import (
     Duration,
     RemovalPolicy,
     CfnOutput,
-    DockerImage
+    DockerImage,
+    AssetHashType
 )
 from constructs import Construct
 import os
@@ -103,7 +104,15 @@ class BackupStack(Stack):
                     "image": DockerImage.from_registry("public.ecr.aws/sam/build-python3.9:latest"),
                     "command": [
                         "bash", "-c",
-                        "pip install -r requirements.txt -t /asset-output && cp backup-service.py /asset-output/"
+                        """
+                        pip install --platform manylinux2014_x86_64 \
+                            --target=/asset-output \
+                            --implementation cp \
+                            --python-version 3.9 \
+                            --only-binary=:all: --upgrade \
+                            -r requirements.txt && \
+                        cp backup-service.py /asset-output/
+                        """
                     ]
                 }
             ),
