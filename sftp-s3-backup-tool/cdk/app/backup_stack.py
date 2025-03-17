@@ -3,6 +3,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_lambda as lambda_,
     aws_iam as iam,
+    aws_scheduler as scheduler,
     Duration,
     RemovalPolicy,
     CfnOutput,
@@ -125,6 +126,37 @@ class BackupStack(Stack):
             role=lambda_role
         )
 
+        # Create EventBridge Scheduler role
+        scheduler_role = iam.Role(
+            self,
+            "SchedulerRole",
+            assumed_by=iam.ServicePrincipal("scheduler.amazonaws.com"),
+            description="Role for EventBridge Scheduler to invoke Lambda function"
+        )
+
+        # Allow scheduler to invoke the Lambda function
+        scheduler_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["lambda:InvokeFunction"],
+                resources=[self.lambda_function.function_arn]
+            )
+        )
+
+        # Create EventBridge Schedule to trigger Lambda daily at 5 AM UTC (midnight EST)
+        schedule = scheduler.CfnSchedule(
+            self,
+            "DailyBackupSchedule",
+            schedule_expression="cron(0 5 * * ? *)",  # 5 AM UTC daily
+            flexible_time_window={
+                "mode": "OFF"
+            },
+            target={
+                "arn": self.lambda_function.function_arn,
+                "roleArn": scheduler_role.role_arn
+            },
+            description="Triggers SFTP backup Lambda function daily at 5 AM UTC"
+        )
+
         # Add CloudFormation outputs
         CfnOutput(
             self,
@@ -138,6 +170,13 @@ class BackupStack(Stack):
             "LambdaFunctionArn",
             value=self.lambda_function.function_arn,
             description="ARN of the backup Lambda function"
+        )
+
+        CfnOutput(
+            self,
+            "ScheduleName",
+            value=schedule.ref,
+            description="Name of the EventBridge Schedule"
         )
 
         # Apply tags
