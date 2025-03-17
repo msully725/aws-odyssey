@@ -18,7 +18,7 @@ graph TD
 - **Secrets Manager**: Securely stores SFTP credentials
 
 ## Setup
-1. Create a `.env` file in the `cdk` directory with the following variables:
+1. Create a `.env` file in the root directory with the following variables:
    ```
    SFTP_HOST=your-sftp-host
    SFTP_USERNAME=your-username
