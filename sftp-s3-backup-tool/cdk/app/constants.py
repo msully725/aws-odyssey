@@ -22,7 +22,8 @@ ENV_VARS = {
     "SECRET_NAME": os.getenv("SECRET_NAME"),
     "REMOTE_PATH": os.getenv("REMOTE_PATH"),
     "LOCAL_BACKUP_PATH": os.getenv("LOCAL_BACKUP_PATH"),
-    "S3_BUCKET": os.getenv("S3_BUCKET")
+    "S3_BUCKET": os.getenv("S3_BUCKET"),
+    "ALERT_EMAIL": os.getenv("ALERT_EMAIL")
 }
 
 # Lambda environment variables (subset of ENV_VARS)

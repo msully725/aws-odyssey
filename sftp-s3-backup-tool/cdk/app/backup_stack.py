@@ -4,6 +4,10 @@ from aws_cdk import (
     aws_lambda as lambda_,
     aws_iam as iam,
     aws_scheduler as scheduler,
+    aws_sns as sns,
+    aws_sns_subscriptions as subscriptions,
+    aws_cloudwatch as cloudwatch,
+    aws_cloudwatch_actions as cloudwatch_actions,
     Duration,
     RemovalPolicy,
     CfnOutput,
@@ -33,6 +37,19 @@ load_dotenv(dotenv_path=env_path)
 class BackupStack(Stack):
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, description=STACK_DESCRIPTION, **kwargs)
+
+        # Create SNS Topic for alerts
+        alerts_topic = sns.Topic(
+            self,
+            "BackupAlertsTopic",
+            display_name="SFTP Backup Alerts"
+        )
+
+        # Add email subscription to SNS topic if email is provided
+        if 'ALERT_EMAIL' in ENV_VARS:
+            alerts_topic.add_subscription(
+                subscriptions.EmailSubscription(ENV_VARS['ALERT_EMAIL'])
+            )
 
         # Create S3 bucket for backups with specified name
         self.backup_bucket = s3.Bucket(
@@ -90,6 +107,16 @@ class BackupStack(Stack):
                 resources=[
                     f"arn:aws:secretsmanager:{self.region}:{self.account}:secret:{ENV_VARS['SECRET_NAME']}-*"
                 ]
+            )
+        )
+
+        # Add permission for Lambda to put custom metrics
+        lambda_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "cloudwatch:PutMetricData"
+                ],
+                resources=["*"]
             )
         )
 
@@ -157,6 +184,73 @@ class BackupStack(Stack):
             description="Triggers SFTP backup Lambda function daily at 5 AM UTC"
         )
 
+        # Create CloudWatch Alarms
+
+        # 1. Lambda Error Alarm
+        lambda_errors_alarm = cloudwatch.Alarm(
+            self,
+            "LambdaErrorsAlarm",
+            metric=self.lambda_function.metric_errors(),
+            threshold=1,
+            evaluation_periods=1,
+            alarm_description="Alert when the backup Lambda function encounters any errors",
+            alarm_name=f"{STACK_NAME}-lambda-errors"
+        )
+        lambda_errors_alarm.add_alarm_action(
+            cloudwatch_actions.SnsAction(alerts_topic)
+        )
+
+        # 2. Lambda Success Metric and Alarm
+        success_metric = cloudwatch.Metric(
+            namespace="SFTPBackup",
+            metric_name="SuccessfulBackup",
+            dimensions_map={
+                "FunctionName": self.lambda_function.function_name
+            },
+            period=Duration.hours(24)
+        )
+
+        backup_missing_alarm = cloudwatch.Alarm(
+            self,
+            "BackupMissingAlarm",
+            metric=success_metric,
+            threshold=1,
+            comparison_operator=cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+            evaluation_periods=1,
+            alarm_description="Alert when no successful backup has occurred in the past 24 hours",
+            alarm_name=f"{STACK_NAME}-backup-missing",
+            treat_missing_data=cloudwatch.TreatMissingData.BREACHING
+        )
+        backup_missing_alarm.add_alarm_action(
+            cloudwatch_actions.SnsAction(alerts_topic)
+        )
+
+        # 3. Schedule Execution Alarm
+        schedule_metric = cloudwatch.Metric(
+            namespace="AWS/Scheduler",
+            metric_name="TargetInvocations",
+            dimensions_map={
+                "ScheduleName": schedule.ref,
+                "ScheduleGroup": "default"
+            },
+            period=Duration.hours(24)
+        )
+
+        schedule_failure_alarm = cloudwatch.Alarm(
+            self,
+            "ScheduleFailureAlarm",
+            metric=schedule_metric,
+            threshold=1,
+            comparison_operator=cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+            evaluation_periods=1,
+            alarm_description="Alert when the backup schedule fails to trigger",
+            alarm_name=f"{STACK_NAME}-schedule-failure",
+            treat_missing_data=cloudwatch.TreatMissingData.BREACHING
+        )
+        schedule_failure_alarm.add_alarm_action(
+            cloudwatch_actions.SnsAction(alerts_topic)
+        )
+
         # Add CloudFormation outputs
         CfnOutput(
             self,
@@ -177,6 +271,13 @@ class BackupStack(Stack):
             "ScheduleName",
             value=schedule.ref,
             description="Name of the EventBridge Schedule"
+        )
+
+        CfnOutput(
+            self,
+            "AlertsTopicArn",
+            value=alerts_topic.topic_arn,
+            description="ARN of the SNS topic for backup alerts"
         )
 
         # Apply tags

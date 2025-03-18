@@ -21,6 +21,30 @@ S3_BUCKET = os.getenv("S3_BUCKET")
 DEFAULT_SFTP_PORT = int(os.getenv("SFTP_PORT", 22))
 TEMP_LOCAL_PATH = "/tmp/data"  # Define the temporary directory for backups
 
+def emit_success_metric():
+    """Emit a CloudWatch metric indicating successful backup."""
+    try:
+        cloudwatch = boto3.client('cloudwatch')
+        cloudwatch.put_metric_data(
+            Namespace='SFTPBackup',
+            MetricData=[
+                {
+                    'MetricName': 'SuccessfulBackup',
+                    'Value': 1,
+                    'Unit': 'Count',
+                    'Dimensions': [
+                        {
+                            'Name': 'FunctionName',
+                            'Value': os.environ.get('AWS_LAMBDA_FUNCTION_NAME', 'unknown')
+                        }
+                    ]
+                }
+            ]
+        )
+        print("✅ Emitted success metric to CloudWatch")
+    except Exception as e:
+        print(f"⚠️ Failed to emit success metric: {e}")
+
 def parse_sftp_host(sftp_host):
     """Extract hostname and port if included in the host string."""
     sftp_host = sftp_host.replace("sftp://", "").strip()
@@ -164,6 +188,9 @@ def backup_sftp_data():
 
     print("🔹 Cleaning up temporary files...")
     os.system(f"rm -rf {TEMP_LOCAL_PATH} {LOCAL_BACKUP_PATH}")
+
+    # Emit success metric
+    emit_success_metric()
 
     print("✅ Backup process completed successfully.")
     return {"status": "Backup successful"}
